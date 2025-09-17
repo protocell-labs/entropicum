@@ -1,0 +1,12 @@
+fileFormatVersion: 2
+guid: 6db4213c29d678644b5bbedb443af7d2
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - tectonPrefab: {fileID: 486823660141999314, guid: 4c99ffd0736793e43bfc101bc2947da6, type: 3}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
