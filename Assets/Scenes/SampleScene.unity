@@ -259,33 +259,33 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   tectonPrefab: {fileID: 486823660141999314, guid: 4c99ffd0736793e43bfc101bc2947da6, type: 3}
-  countX: 120
-  countY: 60
-  countZ: 120
+  countX: 75
+  countY: 30
+  countZ: 75
   noiseScaleX: 0.05
   noiseScaleY: 0.05
   noiseScaleZ: 0.05
   noiseThreshold: 0.55
   noiseOffset: {x: 0, y: 0, z: 0}
   useRandomNoiseOffset: 1
-  noiseSeed: 10000
+  noiseSeed: 11111
   enableSectorOffsets: 1
-  sectorSizeX: 20
-  sectorSizeY: 20
-  sectorSizeZ: 20
+  sectorSizeX: 15
+  sectorSizeY: 10
+  sectorSizeZ: 15
   sectorOffsetSize: {x: 50, y: 50, z: 50}
   gapX: 0.01
   gapY: 0.01
   gapZ: 0.01
-  offsetX: -60
+  offsetX: -40
   offsetY: 0
-  offsetZ: -60
+  offsetZ: -40
   autoCenterOnWorldOrigin: 0
   carveCentralHole: 1
   holeRadius: 3
-  palette_color_1: {fileID: 2100000, guid: 6a66f82b5c885304dbc7aa6ac7059a48, type: 2}
+  palette_color_1: {fileID: 2100000, guid: 2c5c467e61e99ff4186735f0c2bd8b31, type: 2}
   palette_color_2: {fileID: 2100000, guid: df4b745af6361414aaee5693c175d737, type: 2}
-  palette_color_3: {fileID: 2100000, guid: 2c5c467e61e99ff4186735f0c2bd8b31, type: 2}
+  palette_color_3: {fileID: 2100000, guid: 6a66f82b5c885304dbc7aa6ac7059a48, type: 2}
   rareMat2Probability: 0.05
   materialSeed: 12121
   heightBias: 1
@@ -298,13 +298,15 @@ MonoBehaviour:
   jitterSeed: 7777
   enableExplosion: 1
   explosionCenter: {x: 0, y: 20, z: 0}
-  explosionStrength: 1000
+  explosionStrength: 200
   explosionFalloffPower: 2
-  useCubicFalloff: 0
-  explosionRotationScale: 45
+  useCubicFalloff: 1
+  explosionRotationScale: 15
   explosionRotationSeed: 24680
+  explosionDirectionJitterDegrees: 15
+  explosionMagnitudeJitter: 0.5
   combineMeshes: 1
-  addMeshCollider: 1
+  addMeshCollider: 0
   destroySourcesAfterCombine: 1
 --- !u!4 &622496527
 Transform:

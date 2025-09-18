@@ -355,6 +355,7 @@ public class TectonGenerator : MonoBehaviour
         var parent = transform;
         var worldToLocal = parent.worldToLocalMatrix;
 
+        // Group all child meshes by their (first) material
         var byMaterial = new Dictionary<Material, List<CombineInstance>>();
         var meshFilters = GetComponentsInChildren<MeshFilter>(includeInactive: false);
 
@@ -402,6 +403,8 @@ public class TectonGenerator : MonoBehaviour
 
         // Create combined GameObjects per material
         int totalCombinedParts = 0;
+        int totalVertices = 0; // NEW
+
         foreach (var kvp in byMaterial)
         {
             var mat = kvp.Key;
@@ -434,6 +437,7 @@ public class TectonGenerator : MonoBehaviour
             }
 
             totalCombinedParts += combines.Count;
+            totalVertices += combinedMesh.vertexCount; // NEW
         }
 
         if (destroySourcesAfterCombine)
@@ -448,8 +452,10 @@ public class TectonGenerator : MonoBehaviour
             foreach (var go in toDestroy) Destroy(go);
         }
 
-        Debug.Log($"TectonGenerator: Combined {totalCombinedParts} parts into {byMaterial.Count} material groups (Static).");
+        Debug.Log($"TectonGenerator: Combined {totalCombinedParts} parts into {byMaterial.Count} material groups (Static). " +
+                  $"Total vertices across all combined meshes = {totalVertices}");
     }
+
 
     private void OnValidate()
     {
