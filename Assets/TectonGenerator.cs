@@ -93,6 +93,25 @@ public class TectonGenerator : MonoBehaviour
     [Tooltip("Seed for reproducible rotation jitter.")]
     [SerializeField] private int jitterSeed = 7777;
 
+    [Header("Explosion")]
+    [SerializeField] private bool enableExplosion = false;
+    [Tooltip("Explosion center in world space.")]
+    [SerializeField] private Vector3 explosionCenter = Vector3.zero;
+    [Tooltip("Scales the explosion displacement/rotation.")]
+    [SerializeField, Min(0f)] private float explosionStrength = 0f;
+    [Tooltip("Exponent for distance falloff (2 = inverse-square).")]
+    [SerializeField, Min(1f)] private float explosionFalloffPower = 2f;
+    [Tooltip("If ON, uses cube falloff (1/d^3) instead of the power above.")]
+    [SerializeField] private bool useCubicFalloff = false;
+    [Tooltip("Maximum random rotation (degrees) before scaling by falloff.")]
+    [SerializeField, Min(0f)] private float explosionRotationScale = 45f;
+    [Tooltip("Seed for explosion rotation randomness.")]
+    [SerializeField] private int explosionRotationSeed = 24680;
+    [Tooltip("Max angular deviation for explosion direction (degrees).")]
+    [SerializeField, Range(0f, 45f)] private float explosionDirectionJitterDegrees = 8f;
+    [Tooltip("Random magnitude jitter as ±fraction of displacement (0..1).")]
+    [SerializeField, Range(0f, 1f)] private float explosionMagnitudeJitter = 0.25f;
+
     [Header("Combining")]
     [SerializeField] private bool combineMeshes = true;
     [SerializeField] private bool addMeshCollider = true;
@@ -147,6 +166,7 @@ public class TectonGenerator : MonoBehaviour
         // RNGs (deterministic)
         var matRng = new System.Random(materialSeed);
         var jitterRng = new System.Random(jitterSeed);
+        var explosionRng = new System.Random(explosionRotationSeed);
 
         // Generate blocks with noise filtering, hole carving, material assignment, and rotation jitter
         for (int i = 0; i < countX; i++)
@@ -165,9 +185,9 @@ public class TectonGenerator : MonoBehaviour
                     // Cylindrical clearing test (XZ only)
                     if (carveCentralHole)
                     {
-                        float dx = pos.x - clearingCenter.x;
-                        float dz = pos.z - clearingCenter.z;
-                        if ((dx * dx + dz * dz) < (holeRadius * holeRadius))
+                        float dx0 = pos.x - clearingCenter.x;
+                        float dz0 = pos.z - clearingCenter.z;
+                        if ((dx0 * dx0 + dz0 * dz0) < (holeRadius * holeRadius))
                             continue; // inside hole → skip
                     }
 
@@ -195,7 +215,7 @@ public class TectonGenerator : MonoBehaviour
                     float normalized = (n + 1f) * 0.5f;
                     if (normalized < noiseThreshold) continue;
 
-                    // --- Palette cycle (NEW): rotate the three palette slots per element ---
+                    // --- Palette cycle (unchanged) ---
                     Material[] basePal = { palette_color_1, palette_color_2, palette_color_3 };
                     Material[] cycledPal = basePal;
                     if (enablePaletteCycle && paletteCycleSize > 0)
@@ -206,7 +226,6 @@ public class TectonGenerator : MonoBehaviour
 
                         int shift = Mathf.Abs(axisIndex + paletteCycleOffset) % paletteCycleSize;
 
-                        // rotate basePal by 'shift' into cycledPal (size assumed 3 for your palette)
                         cycledPal = new Material[3];
                         cycledPal[0] = basePal[(0 + shift) % 3];
                         cycledPal[1] = basePal[(1 + shift) % 3];
@@ -226,8 +245,7 @@ public class TectonGenerator : MonoBehaviour
 
                     float r = (float)matRng.NextDouble();
                     Material chosen;
-                    // IMPORTANT: use cycledPal slots:
-                    //  cycledPal[1] = rare slot, cycledPal[0] = top-biased, cycledPal[2] = bottom-biased
+                    // cycledPal[1] = rare slot, [0] = top-biased, [2] = bottom-biased
                     if (r < p2 && cycledPal[1] != null)
                         chosen = cycledPal[1];
                     else if (r < p2 + p1 && cycledPal[0] != null)
@@ -248,8 +266,71 @@ public class TectonGenerator : MonoBehaviour
                         rot = Quaternion.Euler(rx, ry, rz);
                     }
 
+                    // --- EXPLOSION (NEW) ---
+                    Vector3 explodedPos = pos;
+                    Quaternion explodedRot = rot;
+
+                    if (enableExplosion && explosionStrength > 0f)
+                    {
+                        // Vector from explosion center to element origin (world)
+                        Vector3 fromCenter = pos - explosionCenter;
+                        float dist = fromCenter.magnitude;
+
+                        // Avoid division by 0 (or huge impulses)
+                        const float eps = 1e-4f;
+                        if (dist < eps) dist = eps;
+
+                        float power = useCubicFalloff ? 3f : Mathf.Max(1f, explosionFalloffPower);
+                        float falloff = explosionStrength / Mathf.Pow(dist, power);
+
+                        // Base direction
+                        Vector3 dir = fromCenter / dist;
+
+                        // === Direction jitter (small tilt) ===
+                        if (explosionDirectionJitterDegrees > 0f)
+                        {
+                            // random vector
+                            Vector3 rand = new Vector3(
+                                (float)explosionRng.NextDouble() * 2f - 1f,
+                                (float)explosionRng.NextDouble() * 2f - 1f,
+                                (float)explosionRng.NextDouble() * 2f - 1f
+                            );
+                            if (rand.sqrMagnitude < 1e-8f) rand = Vector3.up;
+
+                            // axis roughly perpendicular to dir
+                            Vector3 axis = Vector3.Cross(dir, rand);
+                            if (axis.sqrMagnitude < 1e-8f) axis = Vector3.Cross(dir, Vector3.up);
+
+                            float ang = ((float)explosionRng.NextDouble() * 2f - 1f) * explosionDirectionJitterDegrees;
+                            Quaternion tilt = Quaternion.AngleAxis(ang, axis.normalized);
+                            dir = (tilt * dir).normalized;
+                        }
+
+                        // === Magnitude jitter (± percentage) ===
+                        if (explosionMagnitudeJitter > 0f)
+                        {
+                            float magJ = 1f + ((float)explosionRng.NextDouble() * 2f - 1f) * explosionMagnitudeJitter;
+                            if (magJ < 0f) magJ = 0f; // no negative displacement
+                            falloff *= magJ;
+                        }
+
+                        // Translation along (jittered) direction
+                        explodedPos = pos + dir * falloff;
+
+                        // Extra random rotation scaled by same falloff (unchanged)
+                        if (explosionRotationScale > 0f)
+                        {
+                            float rxE = (float)(explosionRng.NextDouble() * 2.0 - 1.0) * explosionRotationScale * falloff;
+                            float ryE = (float)(explosionRng.NextDouble() * 2.0 - 1.0) * explosionRotationScale * falloff;
+                            float rzE = (float)(explosionRng.NextDouble() * 2.0 - 1.0) * explosionRotationScale * falloff;
+                            Quaternion qE = Quaternion.Euler(rxE, ryE, rzE);
+                            explodedRot = qE * explodedRot;
+                        }
+                    }
+
+
                     // Spawn & parent, apply material
-                    var go = Instantiate(tectonPrefab, pos, rot, transform);
+                    var go = Instantiate(tectonPrefab, explodedPos, explodedRot, transform);
                     if (chosen != null)
                     {
                         var mr = go.GetComponentInChildren<MeshRenderer>();
@@ -393,5 +474,10 @@ public class TectonGenerator : MonoBehaviour
 
         // clamps for palette cycle
         paletteCycleSize = Mathf.Max(1, paletteCycleSize);
+
+        // sanity for explosion
+        explosionFalloffPower = Mathf.Max(1f, explosionFalloffPower);
+        explosionStrength = Mathf.Max(0f, explosionStrength);
+        explosionRotationScale = Mathf.Max(0f, explosionRotationScale);
     }
 }

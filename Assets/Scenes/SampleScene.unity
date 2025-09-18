@@ -296,6 +296,13 @@ MonoBehaviour:
   enableRotationJitter: 1
   jitterMaxDegrees: 1.6
   jitterSeed: 7777
+  enableExplosion: 1
+  explosionCenter: {x: 0, y: 20, z: 0}
+  explosionStrength: 1000
+  explosionFalloffPower: 2
+  useCubicFalloff: 0
+  explosionRotationScale: 45
+  explosionRotationSeed: 24680
   combineMeshes: 1
   addMeshCollider: 1
   destroySourcesAfterCombine: 1
